@@ -1,10 +1,14 @@
 using JuMP
-using Cbc
+#using Cbc
 using PyPlot
+using Gurobi
 
 
 
 function Run()
+
+    
+    ENV["GUROBI_HOME"] = "/home/philippe/gurobi912/linux64"
 
 n = 10
 m = 10
@@ -60,6 +64,7 @@ times = [vec([1 3 6 7 3 6]),
 
 
 #FT10
+#=
 times =[  vec([29    78     9    36    49    11    62    56    44    21]),
 vec([43    90    75    11    69    28    46    46    72    30]),
 vec([91    85    39    74    90    10    12    89    45    33]),
@@ -83,8 +88,8 @@ vec([85    13    61     7    64    76    47    52    90    45])]
   vec([1  2  4   6  3  10   7   8   5   9]),
   vec([2  1  3   7  9  10   6   4   5   8]),]
       
+=#
 
-#=
 #LA19
  times=[vec([44 5 58 97 9 84 77 96 58 89]),
  vec([15 31 87 57 77 85 81 39 73 21]),
@@ -115,7 +120,7 @@ vec([85    13    61     7    64    76    47    52    90    45])]
  vec([6 3 4 7 5 8 9 10 2 1]),
  vec([10 5 7 8 1 3 9 6 4 2])]
 
-=#
+
 #=
 
  machines = [[2, 3, 1],
@@ -136,10 +141,12 @@ println(machines)
 println(mach)
  =#
 
-model=Model(Cbc.Optimizer)      
-set_optimizer_attribute(model, "logLevel", 1)
+model=Model(Gurobi.Optimizer)      
+#model=Model(Cbc.Optimizer)      
+
+#set_optimizer_attribute(model, "logLevel", 1)
 #set_optimizer_attribute(model, "maxNodes", 100000)
-set_optimizer_attribute(model, "seconds", 3600)
+#set_optimizer_attribute(model, "seconds", 3600)
 @variable(model,c >= 0)       
 @variable(model, y[1:n, 1:n, 1:m], Bin);
 @variable(model, x[1:n, 1:m] >= 0);                
