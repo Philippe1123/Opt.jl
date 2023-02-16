@@ -7,8 +7,8 @@ function run()
 
 
 
-PT = [[1, 2, 2],
-         [2, 1, 2],
+PT = [[2, 1, 2],
+         [1, 2, 2],
          [1, 2, 1]]
 
 Ma = [[3, 1, 2],
@@ -23,7 +23,7 @@ Ma = [[3, 1, 2],
 population_size = 30
 crossover_rate = 0.9
 mutation_rate = 0.1
-Num_Iteration = 1000
+Num_Iteration = 10
 
 
 population_list = zeros(population_size, j_num * ma_num)
@@ -168,15 +168,21 @@ for m in 1:population_size*2
     PT2 = deepcopy(PT)
     for j in 1:j_num*ma_num
         for k in 1:ma_num
+            println("---")
+            println(Ma2[Int64(Gen[m,j])][k])
+
+            println(j)
             if Ma2[Int64(Gen[m,j])][k] != 0
  #               Gen_m[m,j] = Ma2[Int64(Gen[m,j]),k]
  #               Gen_t[m,j] = PT2[Int64(Gen[m,j]),k]
-
-                Gen_m[m,j] = Ma2[Int64(Gen[m,j])][k]
-                Gen_t[m,j] = PT2[Int64(Gen[m,j])][k]
+                println(j)
+                Gen_m[m,j] = deepcopy(Ma2[Int64(Gen[m,j])][k])
+                Gen_t[m,j] = deepcopy(PT2[Int64(Gen[m,j])][k])
                 Ma2[Int64(Gen[m,j])][k] = 0
                 break
             end
+            println("---")
+
         end
     end
 
@@ -184,7 +190,7 @@ for m in 1:population_size*2
     for k in 1:ma_num
         for j in 1:j_num*ma_num
             if Gen_m[m,j] == k
-                MachineJob[m,t] = Gen[m,j] 
+                MachineJob[m,t] = deepcopy(Gen[m,j])
                 t = t + 1
             end
         end
@@ -224,11 +230,11 @@ for m in 1:population_size*2
 
 
         elseif t_count[Gen_mmj] >= 3
-            temBeginEnd = zeros(2,Int64(t_count[Gen_mmj]));
+            temBeginEnd = zeros(2,Int64(t_count[Gen_mmj]))
 
             for k = 1:Int64(t_count[Gen_mmj])-1
-                temBeginEnd[1, 1:Int64(t_count[Gen_mmj]-1)] = MachineTimeBegin[m, Int64(Gen_mmj * j_num - j_num + 1) : Int64(Gen_mmj * j_num - j_num + t_count[Gen_mmj] - 1)]
-                temBeginEnd[2, 1:Int64(t_count[Gen_mmj]-1)] = MachineTimeEnd[m, Int64(Gen_mmj * j_num - j_num + 1) : Int64(Gen_mmj * j_num - j_num + t_count[Gen_mmj] - 1)]
+                temBeginEnd[1, 1:Int64(t_count[Gen_mmj]-1)] = deepcopy(MachineTimeBegin[m, Int64(Gen_mmj * j_num - j_num + 1) : Int64(Gen_mmj * j_num - j_num + t_count[Gen_mmj] - 1)])
+                temBeginEnd[2, 1:Int64(t_count[Gen_mmj]-1)] = deepcopy(MachineTimeEnd[m, Int64(Gen_mmj * j_num - j_num + 1) : Int64(Gen_mmj * j_num - j_num + t_count[Gen_mmj] - 1)])
                 temBeginEnd = sort(temBeginEnd', dims = 1)
                 temBeginEnd = transpose(temBeginEnd)
 
@@ -281,7 +287,7 @@ end
         Scheduling_best = fitness[(findall(x -> x == Makespan_best,fitness[:,1]))[1],1:1+j_num*ma_num]
     end
     
-    fitness = sort(fitness,dims=1);
+    fitness = fitness[sortperm(fitness[:,1]),:]
     population_list = fitness[1:population_size,2:1+j_num*ma_num]
     
     # Selection
@@ -327,7 +333,7 @@ end
         end
     end
 
-
+println(string("makespanBes",Makespan_best))
 
 
 end
