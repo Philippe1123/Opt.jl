@@ -7,7 +7,7 @@ using XLSX
 
 
 function Run()
-    nameOfFile = "JSP_dataset_ORB10.xlsx"
+    nameOfFile = "JSP_dataset_FT06.xlsx"
 
     ENV["GUROBI_HOME"] = "/home/philippe/gurobi912/linux64"
     xf = XLSX.readxlsx(nameOfFile)

@@ -28,7 +28,7 @@ function run()
 
     for j = 1:n
         for i = 1:m
-            TimesDict[mat[i,j]] =  times[i,j]
+            TimesDict[mat[i, j]] = times[i, j]
         end
     end
 
@@ -36,7 +36,7 @@ function run()
         for i = 1:m-1
 
             GraphMat[mat[j, i], mat[j, i+1]] = 1
-            TimesMat[mat[j, i], mat[j, i+1]] = times[j,i]
+            TimesMat[mat[j, i], mat[j, i+1]] = times[j, i]
             println(GraphMat[mat[j, i], mat[j, i+1]])
 
         end
@@ -45,7 +45,7 @@ function run()
     for j = 1:n
 
         GraphMat[mat[j, m], n*m+2] = 1
-        TimesMat[mat[j, m], n*m+2] = times[j,end]
+        TimesMat[mat[j, m], n*m+2] = times[j, end]
         #println(GraphMat[mat[j,m],n*m+2])
 
 
@@ -83,7 +83,7 @@ function run()
 
     @show GraphMat
 
-    Bidir(GraphMat, TimesMat,TimesDict, mat, 3)
+    Bidir(GraphMat, TimesMat, TimesDict, mat, 3)
 
 
 
@@ -93,8 +93,8 @@ end
 
 
 
-function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, njobs::Int64)
-    TimesMatInv = deepcopy(TimesMat)
+function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, njobs::Int64)
+    TimesMatInv = Matrix(transpose(deepcopy(TimesMat)))
     #initialisation
     Sol = deepcopy(Graph)
     L = Int64[]
@@ -105,19 +105,7 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
     t = Dict()
     S = Int64[]
     T = Int64[]
-    pos = findall(x -> x == 1, Graph[1, :])
-    ln = length(pos)
-    for op = 1:ln
-        append!(S, pos[op])
-        r[pos[op]] = 0 
-    end
 
-    pos = findall(x -> x == 1, Graph[:, end])
-    ln = length(pos)
-    for op = 1:ln
-        append!(T, pos[op])
-        t[pos[op]] = 0
-    end
     SJ = Dict()
     PJ = Dict()
     for j = 1:size(Jobs, 1)
@@ -130,9 +118,40 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
         end
     end
 
+
+
+
+
+    pos = findall(x -> x == 1, Graph[1, :])
+    ln = length(pos)
+    for op = 1:ln
+        append!(S, pos[op])
+        r[pos[op]] = 0
+    end
+
+    pos = findall(x -> x == 1, Graph[:, end])
+    ln = length(pos)
+    for op = 1:ln
+        append!(T, pos[op])
+        t[pos[op]] = 0
+
+
+        TimesMatInv[pos[op], PJ[pos[op]]] =
+            TimesMatInv[pos[op], PJ[pos[op]]] + TimesDict[PJ[pos[op]]]
+
+
+
+        t[pos[op]] = t[pos[op]] + TimesMatInv[pos[op], end] # machine precedence constraint
+        #TimesMatInv[end,pos[op]] = 0
+        t[pos[op]] = t[pos[op]] + TimesMatInv[end, pos[op]] # job precedence constraint
+        #TimesMatInv[pos[op],end] = 0
+
+    end
+
+
     #njobs = 11# change
 
-    while (length(L) + length(R)) != size(Graph, 2) 
+    while (length(L) + length(R)) != size(Graph, 2)
         n_in_S = length(S)
         if n_in_S != 0
             elem = 1
@@ -145,8 +164,15 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
         ln = length(pos)
 
         for op = 1:ln
-            Sol[operation_under_consideration, pos[op]] = 1
-            TimesMat[pos[op], operation_under_consideration]=TimesMat[pos[op], operation_under_consideration]+TimesDict[operation_under_consideration]
+            Sol[operation_under_consideration, pos[op]] = 3#forward
+            println(TimesMat[pos[op], operation_under_consideration])
+            #  TimesMat[pos[op], operation_under_consideration]=TimesMat[pos[op], operation_under_consideration]+TimesDict[operation_under_consideration]
+            TimesMat[operation_under_consideration, pos[op]] =
+                TimesMat[operation_under_consideration, pos[op]] +
+                TimesDict[operation_under_consideration]
+
+            println(TimesMat[pos[op], operation_under_consideration])
+
             Sol[pos[op], operation_under_consideration] = 0
         end
         append!(L, operation_under_consideration)
@@ -158,12 +184,31 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
         if length(pos) == 0
             append!(S, SJ[operation_under_consideration])
             r[SJ[operation_under_consideration]] = 0 # add new operation to r
-            
+
         end
 
 
         # Update r
-        for el = 1 :length(S)
+        for el = 1:length(S)
+            out = (findall(x -> x == 3, Sol[:, S[el]]))
+            if length(out) > 0
+                interm = []
+                for ip = 1:size(out, 1)
+                    append!(interm, TimesMat[out[ip], S[el]])
+                end
+                mach_constr = maximum(interm)
+            else
+                mach_constr = 0
+            end
+            out = (findall(x -> x == 1, Sol[:, S[el]]))
+            interm = []
+            for ip = 1:size(out, 1)
+                append!(interm, TimesMat[out[ip], S[el]])
+            end
+            preced_constr = interm[1]
+            #r[S[el]] = sum(TimesMat[:,S[el]])
+            r[S[el]] = mach_constr + preced_constr
+            #=
             int = Sol[:,S[el]]
             pos = findall(x -> x == 1, int)
             for p = 1:length(pos)
@@ -172,9 +217,10 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
             r[S[el]] = r[S[el]] + TimesMat[pos[p],S[el]] # job precedence constraint
             TimesMat[pos[p],S[el]] = 0
             end
+            =#
         end
 
-        
+
 
 
         if (length(L) + length(R)) != size(Graph, 2)
@@ -188,14 +234,18 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
 
             ln = length(pos)
 
+            if operation_under_consideration == 6
+                println("7")
+            end
+
             for op = 1:ln
                 Sol[operation_under_consideration, pos[op]] = 0
                 #TimesMatInv[pos[op], operation_under_consideration]=TimesMatInv[pos[op], operation_under_consideration]+TimesDict[operation_under_consideration]#check
                 TimesMatInv[operation_under_consideration, pos[op]]=TimesMatInv[operation_under_consideration, pos[op]]+TimesDict[operation_under_consideration]#check
 
-                Sol[pos[op], operation_under_consideration] = 1
+                Sol[pos[op], operation_under_consideration] = 4
 
-                
+
             end
 
             append!(R, operation_under_consideration)
@@ -205,19 +255,45 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
             pos = findall(x -> x == PJ[operation_under_consideration], R)
             if length(pos) == 0
                 append!(T, PJ[operation_under_consideration])
-                t[PJ[operation_under_consideration]] = 0 # add new operation to t #check
+                #t[PJ[operation_under_consideration]] = 0 # add new operation to t #check
             end
             # should be an update of t now
             #check whole block
-            for el = 1 :length(T)
+            
+            for el = 1:length(T)
+
+
+                out = (findall(x -> x == 4, Sol[T[el], :]))
+                if length(out) > 0
+                    interm = []
+                    for ip = 1:size(out, 1)
+                        append!(interm, TimesMatInv[out[ip], T[el]])
+                    end
+                    mach_constr = maximum(interm)
+                else
+                    mach_constr = 0
+                end
+                out = (findall(x -> x == 1, Sol[T[el], :]))
+                interm = []
+                for ip = 1:size(out, 1)
+                    append!(interm, TimesMatInv[out[ip], T[el]])
+                end
+                preced_constr = interm[1]
+                #r[S[el]] = sum(TimesMat[:,S[el]])
+                t[T[el]] = mach_constr + preced_constr
+
+
+                #t[T[el]] = sum(TimesMatInv[:,T[el]])
+                #=
                 int = Sol[T[el],:]
                 pos = findall(x -> x == 1, int)
                 for p = 1:length(pos)
                 t[T[el]] = t[T[el]] + TimesMatInv[T[el],pos[p]] # machine precedence constraint
-                TimesMatInv[T[el],pos[p]] = 0
+                #TimesMatInv[T[el],pos[p]] = 0
                 t[T[el]] = t[T[el]] + TimesMatInv[pos[p],T[el]] # job precedence constraint
-                TimesMatInv[pos[p],T[el]] = 0
+                #TimesMatInv[pos[p],T[el]] = 0
                 end
+                =#
             end
 
 
@@ -229,6 +305,21 @@ function Bidir(Graph::Matrix, TimesMat::Matrix,TimesDict::Dict ,Jobs::Matrix, nj
     println(R)
     println(r)
     println(t)
+    @show TimesMatInv
+    @show TimesMat
+    @show Sol
+
+    sumtime = Dict()
+    for kl in keys(r)
+        for jk in keys(t)
+            if kl == jk
+                sumtime[kl] = r[kl] + t[kl]
+            end
+        end
+    end
+
+    @show sumtime
+    @show maximum(sumtime)
 
 
 
