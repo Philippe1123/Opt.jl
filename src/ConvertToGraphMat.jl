@@ -1,5 +1,6 @@
 
 using XLSX
+using PyPlot
 
 
 
@@ -56,6 +57,8 @@ function run()
 
         #compute time from evreynode to end node only job constraint
         for j = 1:n
+
+            TimesMat[mat[j, end],mat[end, end]+1] = times[j, end]
             for i = m-1:-1:1
                 TimesMat[mat[j, i],mat[end, end]+1] = TimesMat[mat[j, i+1], mat[end, end]+1] + TimesMat[mat[j,i],mat[j, i+1]]
 
@@ -108,7 +111,7 @@ function run()
 
     @show GraphMat
 
-    Bidir(GraphMat, TimesMat, TimesDict, mat, 3)
+    Bidir(GraphMat, TimesMat, TimesDict, mat, 3,machines)
 
 
 
@@ -118,7 +121,7 @@ end
 
 
 
-function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, njobs::Int64)
+function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, njobs::Int64,machines::Matrix)
     TimesMatInv = Matrix(transpose(deepcopy(TimesMat)))
     #initialisation
     Sol = deepcopy(Graph)
@@ -187,15 +190,35 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
         pos = findall(x -> x == 2, A)
 
         ln = length(pos)
-
+        println(string("timesmast[1,9]",TimesMat[1,9]))
         for op = 1:ln
             Sol[operation_under_consideration, pos[op]] = 3#forward
             println(TimesMat[pos[op], operation_under_consideration])
-            #  TimesMat[pos[op], operation_under_consideration]=TimesMat[pos[op], operation_under_consideration]+TimesDict[operation_under_consideration]
-            TimesMat[operation_under_consideration, pos[op]] =
-                TimesMat[operation_under_consideration, pos[op]] +
-                TimesDict[operation_under_consideration]
 
+            if TimesMat[1, pos[op]] < TimesMat[1, operation_under_consideration] + TimesDict[operation_under_consideration]
+                TimesMat[1, pos[op]] = TimesMat[1, operation_under_consideration] + TimesDict[operation_under_consideration]
+
+
+
+                out = (findall(x -> x == pos[op], Jobs))
+                for i = out[1][2]:size(Jobs,2)-1
+                    TimesMat[Jobs[1,1]-1,Jobs[out[1][1], i+1]] = TimesMat[Jobs[1,1]-1,Jobs[out[1][1], i+1]] + TimesDict[operation_under_consideration] 
+
+                    mac_cnstr = (findall(x -> x == 3, Sol[Jobs[out[1][1], i+1],:]))  
+                    for jk = 1 :length(mac_cnstr)
+                        TimesMat[Jobs[1,1]-1,mac_cnstr[jk]] = TimesMat[Jobs[1,1]-1,mac_cnstr[jk]] + TimesDict[operation_under_consideration]
+
+                        ### some recursive shit now
+
+
+                        ### end recursvie
+
+
+                    end
+
+
+                end
+            end
             println(TimesMat[pos[op], operation_under_consideration])
 
             Sol[pos[op], operation_under_consideration] = 0
@@ -263,16 +286,29 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
                 println("7")
             end
 
+
+
+
             for op = 1:ln
-                Sol[operation_under_consideration, pos[op]] = 0
-                #TimesMatInv[pos[op], operation_under_consideration]=TimesMatInv[pos[op], operation_under_consideration]+TimesDict[operation_under_consideration]#check
-                TimesMatInv[operation_under_consideration, pos[op]]=TimesMatInv[operation_under_consideration, pos[op]]+TimesDict[operation_under_consideration]#check
-
+                Sol[operation_under_consideration, pos[op]] = 0#backward
+                println(TimesMatInv[pos[op], operation_under_consideration])
+    
+                if TimesMatInv[end, pos[op]] < TimesMatInv[end, operation_under_consideration] + TimesDict[operation_under_consideration]
+                    TimesMatInv[end, pos[op]] = TimesMatInv[end, operation_under_consideration] + TimesDict[operation_under_consideration]
+    
+                    out = (findall(x -> x == pos[op], Jobs))
+                    for i = out[1][2]:size(Jobs,2)-1
+                        TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i+1]] = TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i+1]] + TimesDict[operation_under_consideration]
+                        mac_cnstr = (findall(x -> x == 4, Sol[Jobs[out[1][1], i+1],:]))  
+                        for jk = 1 :length(mac_cnstr)
+                            TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] = TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] + TimesDict[operation_under_consideration]
+                        end
+                    end
+                end
+    
                 Sol[pos[op], operation_under_consideration] = 4
-
-
             end
-
+            
             append!(R, operation_under_consideration)
             remove!(T, operation_under_consideration)
             remove!(S, operation_under_consideration)
@@ -335,16 +371,36 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
     @show Sol
 
     sumtime = Dict()
+    sumvec = []
     for kl in keys(r)
         for jk in keys(t)
             if kl == jk
-                sumtime[kl] = r[kl] + t[kl]
+                sumtime[kl] = TimesMatInv[end,kl] + TimesMat[1,kl]
+                append!(sumvec,sumtime[kl])
+
             end
         end
     end
 
     @show sumtime
-    @show maximum(sumtime)
+    @show maximum(sumvec)
+    figure()
+    maxtime = maximum(sumvec)
+    for kl in keys(r)
+        out = (findall(x -> x == kl, Jobs))
+        #println(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])
+        #println(machines[out[1]]*ones(1,length(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])))
+        plot(collect(TimesMat[1,kl]+0.01:0.01:TimesMat[1,kl]+TimesDict[kl]-0.01),vec(machines[out[1]]*ones(1,length(TimesMat[1,kl]+0.01:0.01:TimesMat[1,kl]+TimesDict[kl]-0.01))))
+    end
+
+    for kl in keys(t)
+        out = (findall(x -> x == kl, Jobs))
+        #println(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])
+        #println(machines[out[1]]*ones(1,length(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])))
+        plot(collect(TimesMatInv[end,kl]+0.01:0.01:TimesMatInv[end,kl]+TimesDict[kl]-0.01),vec(machines[out[1]]*ones(1,length(TimesMatInv[end,kl]+0.01:0.01:TimesMatInv[end,kl]+TimesDict[kl]-0.01))))
+    end
+
+
 
 
 
