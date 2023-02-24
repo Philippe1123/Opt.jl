@@ -42,6 +42,31 @@ function run()
         end
     end
 
+    #compute time from node 1 to every node only job constraint
+    for j = 1:n
+        for i = 2:m
+            TimesMat[mat[1,1]-1,mat[j, i]] = TimesMat[mat[1,1]-1,mat[j, i-1]] + TimesMat[mat[j,i]-1,mat[j, i]]
+            println([mat[1,1]-1,mat[j, i]] )
+            println([mat[1,1]-1,mat[j, i-1]])
+            println([mat[j,i]-1,mat[j, i]])
+            println("---")
+
+        end
+    end
+
+        #compute time from evreynode to end node only job constraint
+        for j = 1:n
+            for i = m-1:-1:1
+                TimesMat[mat[j, i],mat[end, end]+1] = TimesMat[mat[j, i+1], mat[end, end]+1] + TimesMat[mat[j,i],mat[j, i+1]]
+
+    
+            end
+        end
+
+
+
+
+
     for j = 1:n
 
         GraphMat[mat[j, m], n*m+2] = 1
