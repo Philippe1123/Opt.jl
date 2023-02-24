@@ -164,8 +164,8 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
         t[pos[op]] = 0
 
 
-        TimesMatInv[pos[op], PJ[pos[op]]] =
-            TimesMatInv[pos[op], PJ[pos[op]]] + TimesDict[PJ[pos[op]]]
+        #TimesMatInv[pos[op], PJ[pos[op]]] =
+            #TimesMatInv[pos[op], PJ[pos[op]]] + TimesDict[PJ[pos[op]]]
 
 
 
@@ -297,12 +297,12 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
                     TimesMatInv[end, pos[op]] = TimesMatInv[end, operation_under_consideration] + TimesDict[operation_under_consideration]
     
                     out = (findall(x -> x == pos[op], Jobs))
-                    for i = out[1][2]:size(Jobs,2)-1
-                        TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i+1]] = TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i+1]] + TimesDict[operation_under_consideration]
-                        mac_cnstr = (findall(x -> x == 4, Sol[Jobs[out[1][1], i+1],:]))  
-                        for jk = 1 :length(mac_cnstr)
-                            TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] = TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] + TimesDict[operation_under_consideration]
-                        end
+                    for i = out[1][2]:-1:2
+                        TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i-1]] = TimesMatInv[Jobs[end,end]+1,Jobs[out[1][1], i-1]] + TimesDict[operation_under_consideration]
+                        mac_cnstr = (findall(x -> x == 4, Sol[Jobs[out[1][1], i-1],:]))  
+                        #for jk = 1 :length(mac_cnstr) # to be fixed
+                        #    TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] = TimesMatInv[Jobs[end,end]+1,mac_cnstr[jk]] + TimesDict[operation_under_consideration]
+                        #end
                     end
                 end
     
@@ -386,18 +386,29 @@ function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, n
     @show maximum(sumvec)
     figure()
     maxtime = maximum(sumvec)
-    for kl in keys(r)
+    deleteat!(L, 1)
+    println(R)
+    deleteat!(R, 1)
+
+    for kl in L
         out = (findall(x -> x == kl, Jobs))
+        println(kl)
+        println(TimesDict)
+        println(TimesDict[kl])
+
         #println(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])
         #println(machines[out[1]]*ones(1,length(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])))
         plot(collect(TimesMat[1,kl]+0.01:0.01:TimesMat[1,kl]+TimesDict[kl]-0.01),vec(machines[out[1]]*ones(1,length(TimesMat[1,kl]+0.01:0.01:TimesMat[1,kl]+TimesDict[kl]-0.01))))
+        text((2*TimesMat[1,kl]+TimesDict[kl]) / 2, machines[out[1]], string(kl))
     end
 
-    for kl in keys(t)
+    for kl in R
         out = (findall(x -> x == kl, Jobs))
         #println(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])
         #println(machines[out[1]]*ones(1,length(TimesMat[1,kl]:0.01:TimesMat[1,kl]+TimesDict[kl])))
-        plot(collect(TimesMatInv[end,kl]+0.01:0.01:TimesMatInv[end,kl]+TimesDict[kl]-0.01),vec(machines[out[1]]*ones(1,length(TimesMatInv[end,kl]+0.01:0.01:TimesMatInv[end,kl]+TimesDict[kl]-0.01))))
+        plot(collect(maxtime-TimesMatInv[end,kl]+0.01:0.01:maxtime-TimesMatInv[end,kl]+TimesDict[kl]-0.01),vec(machines[out[1]]*ones(1,length(maxtime-TimesMatInv[end,kl]+0.01:0.01:maxtime-TimesMatInv[end,kl]+TimesDict[kl]-0.01))))
+        text((maxtime-TimesMatInv[end,kl]+TimesDict[kl]-0.01+maxtime-TimesMatInv[end,kl]) / 2, machines[out[1]], string(kl))
+
     end
 
 
