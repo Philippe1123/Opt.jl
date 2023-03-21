@@ -102,7 +102,7 @@ function run()
 
 
 
-    Bidir(GraphMat, TimesMat, TimesDict, mat, 3,machines)
+    Bidir(GraphMat, TimesMat, TimesDict, mat ,machines)
 
 
 
@@ -112,7 +112,7 @@ end
 
 
 
-function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix, njobs::Int64,machines::Matrix)
+function Bidir(Graph::Matrix, TimesMat::Matrix, TimesDict::Dict, Jobs::Matrix,machines::Matrix)
     TimesMatInv = Matrix(transpose(deepcopy(TimesMat)))
     #initialisation
     Sol = deepcopy(Graph)
