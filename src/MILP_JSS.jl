@@ -7,7 +7,7 @@ using XLSX
 
 
 function Run()
-    nameOfFile = "JSP_dataset_FT06.xlsx"
+    nameOfFile = "JSP_dataset_LA30.xlsx"
 
     ENV["GUROBI_HOME"] = "/home/philippe/gurobi912/linux64"
     xf = XLSX.readxlsx(nameOfFile)
@@ -241,11 +241,14 @@ function Run()
 
     for (j, i) in Iterators.product(1:n, 1:m)
         a = length(value(x[j, i]).+0.1:0.1:value(x[j, i])+times_old[j, i].-0.1)
-        plot(value(x[j, i]).+0.1:0.1:value(x[j, i])+times_old[j, i].-0.1, i .* ones(a))
+        plot(value(x[j, i]).+0.1:0.1:value(x[j, i])+times_old[j, i].-0.1, i .* ones(a),"k")
         text(value(x[j, i]) + times_old[j, i] / 2, i, string("job ", j))
     end
 
 
+    plt.locator_params(axis="both", integer=true, tight=true)
+    ylabel("Machine Number [/]")
+    xlabel("Time [/]")
 
 
 end
